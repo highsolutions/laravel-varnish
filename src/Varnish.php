@@ -9,14 +9,15 @@ class Varnish
 {
     /**
      * @param string|array $host
+     * @param array|string $pageUri
      *
      * @return \Symfony\Component\Process\Process
      */
-    public function flush($host = null)
+    public function flush($host = null, $pageUri = null)
     {
         $host = $this->getHosts($host);
 
-        $command = $this->generateBanCommand($host);
+        $command = $this->generateBanCommand($host, $pageUri);
 
         return $this->executeCommand($command);
     }
@@ -37,8 +38,11 @@ class Varnish
         return $host;
     }
 
-    public function generateBanCommand(array $hosts): string
+    public function generateBanCommand(array $hosts, $pageUri=null): string
     {
+		$config = config('varnish');
+
+		$command = "sudo varnishadm -S {$config['administrative_secret']} -T 127.0.0.1:{$config['administrative_port']}";
         if (! is_array($hosts)) {
             $hosts = [$hosts];
         }
@@ -49,9 +53,11 @@ class Varnish
             })
             ->implode('|');
 
-        $config = config('varnish');
-
-        return "sudo varnishadm -S {$config['administrative_secret']} -T 127.0.0.1:{$config['administrative_port']} 'ban req.http.host ~ {$hostsRegex}'";
+        $pageUriCommand = '';
+		if(!empty($pageUri)) {
+			$pageUriCommand = " && req.url ~ {$pageUri}";
+		}
+		return "{$command} 'ban req.http.host ~ {$hostsRegex}{$pageUriCommand}'";
     }
 
     protected function executeCommand(string $command): Process

@@ -38,4 +38,12 @@ class VarnishTest extends TestCase
             'example2.com',
         ]));
     }
+
+	/** @test */
+	public function it_can_generate_a_ban_command_for_a_single_host_with_page_url()
+    {
+        $expectedCommand = "sudo varnishadm -S /etc/varnish/secret -T 127.0.0.1:6082 'ban req.http.host ~ (^example.com$) && req.url ~ /example/url'";
+
+        $this->assertEquals($expectedCommand, (new Varnish())->generateBanCommand(['example.com'], '/example/url'));
+    }
 }
